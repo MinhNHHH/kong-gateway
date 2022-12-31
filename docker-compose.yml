@@ -1,0 +1,67 @@
+version: "3.9"
+
+services:
+  # https://stackoverflow.com/questions/10845998/i-forgot-the-password-i-entered-during-postgres-installation
+  postgres:
+    image: postgres:14
+    restart: always
+    hostname: kong-database
+    container_name: kong-database
+    environment:
+      POSTGRES_USER: ${SL_PG_DB_NAME}
+      POSTGRES_DB: ${SL_PG_DB}
+      POSTGRES_PASSWORD: ${SL_PG_DB_PASSWORD}
+    ports:
+      - "5432:5432"
+    networks:
+      - back-end
+  kong-bootstrap:
+    image: kong:latest
+    hostname: kong-bootstrap
+    container_name: kong-bootstrap
+    depends_on:
+      - postgres
+    environment:
+      KONG_DATABASE: ${SL_KONG_DATABASE}
+      KONG_PG_HOST: ${SL_KONG_PG_HOST}
+      KONG_PG_DATABASE: ${SL_PG_DB}
+      KONG_PG_USER: ${SL_PG_DB_NAME}
+      KONG_PG_PASSWORD: ${SL_PG_DB_PASSWORD}
+    command: "kong migrations bootstrap"
+    networks:
+      - back-end
+    restart: 'on-failure'
+
+  kong:
+    image: kong:latest
+    restart: always
+    hostname: kong
+    container_name: kong
+    depends_on:
+      - kong-bootstrap
+    environment:
+      KONG_DATABASE: "postgres"
+      KONG_PG_HOST: ${SL_KONG_PG_HOST}
+      KONG_PG_DATABASE: ${SL_PG_DB}
+      KONG_PG_USER: ${SL_PG_DB_NAME}
+      KONG_PG_PASSWORD: ${SL_PG_DB_PASSWORD}
+      KONG_PROXY_ACCESS_LOG: '/dev/stdout'
+      KONG_ADMIN_ACCESS_LOG: '/dev/stdout'
+      KONG_PROXY_ERROR_LOG: '/dev/stderr'
+      KONG_ADMIN_ERROR_LOG: '/dev/stderr'
+      KONG_ADMIN_LISTEN: "0.0.0.0:8001, 0.0.0.0:8444 ssl"
+    command: "kong start"
+    ports:
+      - "8000:8000"
+      - "8443:8443"
+      - "8001:8001"
+      - "8444:8444"
+    networks:
+      - back-end
+      - front-end
+  
+networks:
+  back-end:
+    name: kong-net
+  front-end:
+    name: test-connection

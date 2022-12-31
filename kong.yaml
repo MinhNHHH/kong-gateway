@@ -1,0 +1,20 @@
+# We will track all services registed in Kong or create new service in here.
+
+services:
+  - name: micro-account
+    host: ${HOST_ACCOUNT_SERVICE}
+    port: ${PORT_ACCOUNT_SERVICE}
+    routes:
+      paths: /
+
+# plugins globally
+plugins_globally:
+  name: proxy-cache
+  config: 
+    response_code: 200
+    request_method: GET
+    content_type:
+      - text/plain
+      - application/json
+    cache_ttl: 300
+    strategy: memory
